@@ -2,12 +2,12 @@
 
 > Seamlessly integrate secrets detection into your GitHub workflows with one line.
 
-[![Version](https://img.shields.io/badge/VaultScan-v1.2-blue)](https://github.com/pavangajjala/vaultscan-community)
+[![Version](https://img.shields.io/badge/VaultScan-v1.2-blue)](https://github.com/vaultscanhq/vaultscan-community)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 > ⭐ Star / 👀 Watch / 🍴 Fork this project if you find it useful!
 
-**VaultScan GitHub Action** is a reusable GitHub Action that automatically scans your repository for secrets and credentials using the [VaultScan Community Edition](https://github.com/pavangajjala/vaultscan-community).
+**VaultScan GitHub Action** is a reusable GitHub Action that automatically scans your repository for secrets and credentials using the [VaultScan Community Edition](https://github.com/vaultscanhq/vaultscan-community).
 
 ---
 
@@ -55,7 +55,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run VaultScan via GitHub Action
-        uses: pavangajjala/vaultscan-action@v1.2
+        uses: vaultscanhq/vaultscan-action@v1.2
 ```
 ---
 
@@ -91,7 +91,7 @@ jobs:
 This action wraps around the VaultScan Community Edition CLI. You can also run VaultScan locally:
 
 ```bash
-git clone https://github.com/pavangajjala/vaultscan-community.git
+git clone https://github.com/vaultscanhq/vaultscan-community.git
 cd vaultscan-community
 pip install -r requirements.txt
 python -m vaultscan.main --path . --verbose
@@ -102,7 +102,7 @@ python -m vaultscan.main --path . --verbose
 
 - Respects `.vaultscanignore` file.
 - Uses `--verbose` flag for clearer logging.
-- Powered by [VaultScan Community Edition v1.2](https://github.com/pavangajjala/vaultscan-community/tree/v1.2)
+- Powered by [VaultScan Community Edition v1.2](https://github.com/vaultscanhq/vaultscan-community/tree/v1.2)
 
 ---
 
@@ -122,4 +122,4 @@ Unauthorized removal of attribution is a license violation.
 
 This is a community edition. Contributions, suggestions, and improvements are welcome!
 
-**📣 Report misuse or unauthorized rebranding [GitHub issues](https://github.com/pavangajjala/vaultscan-action/issues)**
+**📣 Report misuse or unauthorized rebranding [GitHub issues](https://github.com/vaultscanhq/vaultscan-action/issues)**
