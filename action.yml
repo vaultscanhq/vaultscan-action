@@ -1,32 +1,69 @@
 # Developed by Pavan Gajjala – https://github.com/pavangajjala
-# Licensed under Apache 2.0. Unauthorized removal of attribution is prohibited.
+# Licensed under Apache 2.0.
 
 name: VaultScan GitHub Action
-description: VaultScan is a fast, offline-first secret scanner for DevOps and CI/CD pipelines.
-  Detect secrets before they leak — works locally or in GitHub Actions.
-
-  🔐 Pro version coming soon with team reports, API, dashboards.
-  📬 Join waitlist: https://bit.ly/vaultscan-pro
+description: >-
+  Gate pull requests with VaultScan: secrets, risky Terraform plans, Kubernetes
+  manifests and CI workflows, reduced to one ALLOW / WARN / ASK HUMAN / BLOCK verdict.
 
 branding:
   icon: shield
   color: blue
-  
+
+inputs:
+  path:
+    description: Directory to scan for secrets and workflows
+    default: "."
+  plan:
+    description: Path to a Terraform plan in JSON form (terraform show -json). Optional.
+    default: ""
+  manifests:
+    description: File or directory of Kubernetes manifests. Optional.
+    default: ""
+  policy:
+    description: Path to a VaultScan policy file. Defaults to .vaultscan.yml in the scanned path if present.
+    default: ""
+  fail-on-findings:
+    description: >-
+      Fail the job when the verdict is ASK HUMAN or BLOCK. Set to "false" to report
+      without failing, which matches how v1 of this action behaved.
+    default: "true"
+  version:
+    description: Git ref of vaultscan-community to install (tag, branch or commit SHA)
+    default: main
+  ai:
+    description: >-
+      Add the AI review. Needs VAULTSCAN_AI_PROVIDER and VAULTSCAN_AI_MODEL (and an
+      API key for hosted providers) in the job environment.
+    default: "false"
+
+outputs:
+  verdict:
+    description: ALLOW, WARN, ASK_HUMAN or BLOCK
+    value: ${{ steps.gate.outputs.verdict }}
+  report:
+    description: Path to the JSON report
+    value: ${{ steps.gate.outputs.report }}
+
 runs:
   using: composite
   steps:
-    - name: Clone VaultScan
-      run: |
-        git clone https://github.com/pavangajjala/vaultscan-community.git
+    # Installed with pip instead of cloned into the workspace: v1 cloned the
+    # scanner next to the user's code and then scanned its own test fixtures.
+    - name: Install VaultScan
       shell: bash
+      env:
+        VAULTSCAN_REF: ${{ inputs.version }}
+      run: python3 -m pip install --quiet --disable-pip-version-check "git+https://github.com/vaultscanhq/vaultscan-community.git@${VAULTSCAN_REF}"
 
-    - name: Install VaultScan dependencies
-      run: |
-        pip install -r vaultscan-community/requirements.txt
+    - name: Run the gate
+      id: gate
       shell: bash
-
-    - name: Run VaultScan
-      run: |
-        python -m vaultscan.main --path ${{ github.workspace }} --verbose
-      working-directory: vaultscan-community
-      shell: bash
+      env:
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_PLAN: ${{ inputs.plan }}
+        INPUT_MANIFESTS: ${{ inputs.manifests }}
+        INPUT_POLICY: ${{ inputs.policy }}
+        INPUT_FAIL_ON_FINDINGS: ${{ inputs.fail-on-findings }}
+        INPUT_AI: ${{ inputs.ai }}
+      run: '"${GITHUB_ACTION_PATH}/entrypoint.sh"'
