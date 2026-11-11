@@ -1,0 +1,12 @@
+# Deliberately unsafe manifest used by the self-test workflow.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: debug
+spec:
+  hostNetwork: true
+  containers:
+    - name: shell
+      image: ubuntu:latest
+      securityContext:
+        privileged: true

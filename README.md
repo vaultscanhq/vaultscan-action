@@ -1,125 +1,116 @@
 # VaultScan GitHub Action
 
-> Seamlessly integrate secrets detection into your GitHub workflows with one line.
+[![Self-test](https://github.com/vaultscanhq/vaultscan-action/actions/workflows/self-test.yml/badge.svg)](https://github.com/vaultscanhq/vaultscan-action/actions/workflows/self-test.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-[![Version](https://img.shields.io/badge/VaultScan-v1.2-blue)](https://github.com/vaultscanhq/vaultscan-community)
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+Runs [VaultScan](https://github.com/vaultscanhq/vaultscan-community) in a
+workflow and turns the result into one verdict for the change:
 
-> ⭐ Star / 👀 Watch / 🍴 Fork this project if you find it useful!
+| Verdict | Meaning | Job result |
+| --- | --- | --- |
+| **ALLOW** | Nothing needs attention | passes |
+| **WARN** | Findings worth fixing | passes |
+| **ASK HUMAN** | Deletes resources or changes access | fails |
+| **BLOCK** | Should not go ahead as it stands | fails |
 
-**VaultScan GitHub Action** is a reusable GitHub Action that automatically scans your repository for secrets and credentials using the [VaultScan Community Edition](https://github.com/vaultscanhq/vaultscan-community).
+Secrets and GitHub Actions workflows are checked on every run. Terraform plans
+and Kubernetes manifests are checked when you point the action at them. The
+report is written to the job summary.
 
----
-
-## 🚀 Coming Soon: VaultScan Pro
-
-VaultScan Pro is the advanced version of VaultScan, designed for security-conscious teams and enterprises.
-
-**🔐 What's coming:**
-- Team-based scan reports
-- GitHub org-wide scanning
-- REST API for dashboards and automation
-- False positive filtering & custom rules
-- Web dashboard (in development)
-
-📬 [**Join the Waitlist Here**](https://docs.google.com/forms/d/e/1FAIpQLSdKnjmm-qyHQoqp6gFu7k0wkNJ1Nt1DIx4BVMYxyWSfWLJWVQ/viewform?usp=header)
-
----
-
-## 📌 Purpose
-
-This action integrates VaultScan directly into your CI/CD pipeline to detect sensitive information (like AWS keys, Slack tokens, GitHub tokens, and private keys) in your codebase before it reaches production.
-
----
-
-## ⚙️ Setup Instructions
-
-Create `.github/workflows/scan.yml` and paste:
+## Usage
 
 ```yaml
-name: VaultScan Secrets Detection
+name: VaultScan
 
 on:
-  push:
-    branches: [main]
   pull_request:
-    branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
-  vaultscan:
-    name: Run VaultScan on Codebase
+  gate:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Run VaultScan via GitHub Action
-        uses: vaultscanhq/vaultscan-action@v1.2
+      - uses: actions/checkout@v7
+      - uses: vaultscanhq/vaultscan-action@v2
 ```
----
 
-## 📸 Screenshots
+With a Terraform plan and Kubernetes manifests:
 
-### 🖥️ CLI Output
-![CLI Output](assets/cli-output.png)
+```yaml
+      - run: |
+          terraform -chdir=infra init -input=false
+          terraform -chdir=infra plan -input=false -out tfplan
+          terraform -chdir=infra show -json tfplan > plan.json
 
-### ⚙️ GitHub Action Logs
-![GitHub Action](assets/github-action.png)
-
-### 🛒 GitHub Marketplace Listing
-![Marketplace](assets/marketplace.png)
-
----
-
-## 🧪 What This Does
-- Clones the latest VaultScan
-- Installs its Python dependencies
-- Runs the scanner on your repo with --verbose logs
-- Outputs any detected secrets in the Actions tab
-
----
-## 📦 What It Detects
-- AWS Access & Secret Keys
-- Slack Tokens
-- GitHub Tokens
-- Private Keys
-- Generic API Keys
----
-
-## 🔗 VaultScan CLI
-This action wraps around the VaultScan Community Edition CLI. You can also run VaultScan locally:
-
-```bash
-git clone https://github.com/vaultscanhq/vaultscan-community.git
-cd vaultscan-community
-pip install -r requirements.txt
-python -m vaultscan.main --path . --verbose
+      - uses: vaultscanhq/vaultscan-action@v2
+        with:
+          plan: plan.json
+          manifests: deploy/
 ```
----
 
-## ⚙️ Advanced
+## Inputs
 
-- Respects `.vaultscanignore` file.
-- Uses `--verbose` flag for clearer logging.
-- Powered by [VaultScan Community Edition v1.2](https://github.com/vaultscanhq/vaultscan-community/tree/v1.2)
+| Input | Default | Description |
+| --- | --- | --- |
+| `path` | `.` | Directory scanned for secrets and workflows |
+| `plan` | | Terraform plan as JSON (`terraform show -json`) |
+| `manifests` | | File or directory of Kubernetes manifests |
+| `policy` | | Policy file; `.vaultscan.yml` in `path` is used if present |
+| `fail-on-findings` | `true` | Set to `false` to report without failing the job |
+| `version` | `main` | Git ref of `vaultscan-community` to install; pin a tag or SHA for reproducible runs |
+| `ai` | `false` | Add the AI review (see below) |
 
----
+## Outputs
 
-## 📜 License
+| Output | Description |
+| --- | --- |
+| `verdict` | `ALLOW`, `WARN`, `ASK_HUMAN` or `BLOCK` |
+| `report` | Path to the JSON report |
 
-Licensed under the [Apache 2.0 License](LICENSE)
+```yaml
+      - id: vaultscan
+        uses: vaultscanhq/vaultscan-action@v2
+        with:
+          fail-on-findings: "false"
 
----
-## 🛡️ Author & Attribution
+      - if: steps.vaultscan.outputs.verdict == 'ASK_HUMAN'
+        run: echo "Needs sign-off from the platform team"
+```
 
-**Developed by [Pavan Gajjala](https://github.com/pavangajjala)**
-Unauthorized removal of attribution is a license violation.
+## AI review
 
----
+Set `ai: "true"` and provide a model through the job environment. The verdict
+stays rule-based; the model explains the findings and can only escalate.
 
-## 🤝 Community Contributions
+```yaml
+      - uses: vaultscanhq/vaultscan-action@v2
+        with:
+          ai: "true"
+        env:
+          VAULTSCAN_AI_PROVIDER: anthropic
+          VAULTSCAN_AI_MODEL: ${{ vars.VAULTSCAN_AI_MODEL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+```
 
-This is a community edition. Contributions, suggestions, and improvements are welcome!
+Secret values are redacted before anything is sent. See the
+[AI review notes](https://github.com/vaultscanhq/vaultscan-community/blob/main/docs/ai.md).
 
-**📣 Report misuse or unauthorized rebranding [GitHub issues](https://github.com/vaultscanhq/vaultscan-action/issues)**
+## Upgrading from v1
+
+| | v1 | v2 |
+| --- | --- | --- |
+| Checks | Secrets | Secrets, workflows, Terraform plans, Kubernetes manifests |
+| Job result | Always passed | Fails on ASK HUMAN or BLOCK |
+| Output | Log only | Log, job summary, `verdict` and `report` outputs |
+| Install | Cloned the scanner into your workspace | `pip install`, nothing added to the workspace |
+
+To keep the old report-only behaviour while you clean up findings, set
+`fail-on-findings: "false"`.
+
+## License
+
+Apache-2.0. See [LICENSE](LICENSE) and [.github/NOTICE](.github/NOTICE).
+
+Developed by [Pavan Gajjala](https://github.com/pavangajjala).
