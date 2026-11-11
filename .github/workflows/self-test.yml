@@ -1,0 +1,44 @@
+name: Self-test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  clean-repository:
+    name: Clean scan passes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - id: scan
+        uses: ./
+        with:
+          version: ${{ vars.VAULTSCAN_REF || 'main' }}
+      - name: Verdict is ALLOW or WARN
+        env:
+          VERDICT: ${{ steps.scan.outputs.verdict }}
+        run: |
+          echo "verdict: $VERDICT"
+          [ "$VERDICT" = "ALLOW" ] || [ "$VERDICT" = "WARN" ]
+
+  risky-manifest:
+    name: Risky manifest is blocked
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - id: scan
+        uses: ./
+        with:
+          manifests: tests/fixtures/risky-pod.yaml
+          fail-on-findings: "false"
+          version: ${{ vars.VAULTSCAN_REF || 'main' }}
+      - name: Verdict is BLOCK
+        env:
+          VERDICT: ${{ steps.scan.outputs.verdict }}
+        run: |
+          echo "verdict: $VERDICT"
+          [ "$VERDICT" = "BLOCK" ]
