@@ -2,9 +2,7 @@
 # Licensed under Apache 2.0.
 
 name: VaultScan GitHub Action
-description: >-
-  Gate pull requests with VaultScan: secrets, risky Terraform plans, Kubernetes
-  manifests and CI workflows, reduced to one ALLOW / WARN / ASK HUMAN / BLOCK verdict.
+description: Gate pull requests on secrets, risky Terraform plans, Kubernetes manifests and CI workflows with one clear verdict.
 
 branding:
   icon: shield
